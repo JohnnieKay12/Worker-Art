@@ -7,6 +7,9 @@ import { inspectAttr } from 'kimi-plugin-inspect-react'
 export default defineConfig({
   base: './',
   plugins: [inspectAttr(), react()],
+  build:{
+    sourcemap: false
+  },
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "./src"),
