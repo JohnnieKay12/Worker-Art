@@ -200,11 +200,6 @@ const createBookingValidation = [
     .withMessage('Artisan ID is required')
     .isMongoId()
     .withMessage('Invalid artisan ID'),
-  body('serviceCategory')
-    .notEmpty()
-    .withMessage('Service category is required')
-    .isMongoId()
-    .withMessage('Invalid service category ID'),
   body('serviceDescription')
     .trim()
     .notEmpty()

@@ -7,6 +7,7 @@ import type {
   User,
   Artisan,
   Booking,
+  CreateBookingData,
   Payment,
   Review,
   Message,
@@ -203,7 +204,12 @@ export const bookingApi = {
 
   getById: (id: string) => apiService.get<Booking>(`/bookings/${id}`),
 
-  create: (data: Partial<Booking>) => apiService.post<Booking>('/bookings', data),
+  create: (data: CreateBookingData) => apiService.post<Booking>('/bookings', data),
+
+  getMyBookings: () => api.get("/bookings/my-bookings"),
+
+  initializePayment: (bookingId: string) =>
+    apiService.post<{ authorization_url: string }>(`/bookings/${bookingId}/pay`),
 
   updateStatus: (id: string, status: string, note?: string) =>
     apiService.put<Booking>(`/bookings/${id}/status`, { status, note }),

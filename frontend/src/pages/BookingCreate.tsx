@@ -2,39 +2,50 @@ import React, { useState } from "react";
 import { bookingApi } from "@/services/api";
 import { Card, CardContent } from "@/components/ui/card";
 import { CheckCircle } from "lucide-react";
-import { useNavigate, useParams } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 
 const BookingCreate: React.FC = () => {
-  const { artisanId } = useParams(); // get artisan from URL
-
+  // const { artisanId } = useParams(); // get artisan from URL
+  // console.log("Artisan ID:", artisanId)
+;
   const [serviceDescription, setServiceDescription] = useState("");
   const [scheduledDate, setScheduledDate] = useState("");
   const [scheduledTime, setScheduledTime] = useState("");
   const [streetAddress, setStreetAddress] = useState("");
   const [city, setCity] = useState("");
   const [state, setState] = useState("");
-  const [price, setPrice] = useState("");
+  // const [selectedService, setSelectedService] = useState<string>("");
+  // const [price, setPrice] = useState("");
   const [bookingSuccess, setBookingSuccess] = useState(false);
 
   const navigate = useNavigate();
+
+  const location = useLocation();
+
+  const artisanId = location.state?.artisanId;
+
+  console.log("Artisan ID:", artisanId);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
     try {
       const formData = {
-        artisanId: '69b04817da45ab77fdea6001',
-        serviceCategoryId: "69b04814da45ab77fdea5fb5", // TEMP until we pass it
+        artisan: artisanId,
+        serviceCategory: location.state?.serviceCategory,
         serviceDescription,
-        streetAddress,
-        city,
-        state,
+        address: {
+          street: streetAddress,
+          city: city,
+          state: state
+        },
         scheduledDate,
         scheduledTime,
-        price: Number(price),
+        estimatedDuration: 1
       };
 
       const response = await bookingApi.create(formData);
+      console.log("Booking Response:", response);
 
       if (response.success) {
         setBookingSuccess(true);
@@ -45,7 +56,7 @@ const BookingCreate: React.FC = () => {
         setStreetAddress("");
         setCity("");
         setState("");
-        setPrice("");
+        // setPrice("");
 
         setTimeout(() => {
           navigate("/dashboard/bookings");
@@ -145,7 +156,7 @@ const BookingCreate: React.FC = () => {
             />
           </div>
 
-          <div>
+          {/* <div>
             <label className="block text-sm font-medium">Price</label>
             <input
               type="number"
@@ -153,7 +164,7 @@ const BookingCreate: React.FC = () => {
               value={price}
               onChange={(e) => setPrice(e.target.value)}
             />
-          </div>
+          </div> */}
 
           <button
             type="submit"

@@ -14,13 +14,13 @@ const bookingSchema = new mongoose.Schema(
     },
     artisan: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: 'Artisan',
+      ref: 'User',
       required: true,
     },
     serviceCategory: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'ServiceCategory',
-      required: true,
+      // required: true,
     },
     serviceDescription: {
       type: String,
@@ -57,6 +57,25 @@ const bookingSchema = new mongoose.Schema(
       type: String,
       enum: ['pending', 'paid', 'failed', 'refunded', 'partially_refunded'],
       default: 'pending',
+    },
+    //
+    paymentReference: {
+      type: String,
+    },
+    
+    platformCommission: {
+      type: Number,
+      default: 0,
+    },
+    
+    artisanPayoutAmount: {
+      type: Number,
+      default: 0,
+    },
+    
+    paymentMethod: {
+      type: String,
+      enum: ['paystack', 'cash', 'transfer'],
     },
     payment: {
       type: mongoose.Schema.Types.ObjectId,

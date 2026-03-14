@@ -2,6 +2,7 @@ const { Booking, Artisan, User, ServiceCategory, Payment, Conversation } = requi
 const { AppError, asyncHandler } = require('../middleware/errorHandler');
 const { emailService } = require('../services');
 const logger = require('../utils/logger');
+const axios = require('axios');
 
 /**
  * @desc    Get all bookings
@@ -10,6 +11,7 @@ const logger = require('../utils/logger');
  */
 const getBookings = asyncHandler(async (req, res) => {
   const { page = 1, limit = 10, status, paymentStatus, startDate, endDate } = req.query;
+
 
   const filter = {};
   if (status) filter.status = status;
@@ -48,6 +50,32 @@ const getBookings = asyncHandler(async (req, res) => {
       pages: Math.ceil(total / parseInt(limit)),
     },
   });
+});
+
+
+/**
+ * @desc    Get bookings for logged in user
+ * @route   GET /api/bookings/my-bookings
+ * @access  Private
+ */
+const getMyBookings = asyncHandler(async (req, res) => {
+
+  const bookings = await Booking.find({ user: req.user.id })
+    .populate({
+      path: 'artisan',
+      populate: {
+        path: 'user',
+        select: 'firstName lastName phone profileImage'
+      }
+    })
+    .populate('serviceCategory', 'name')
+    .sort({ createdAt: -1 });
+
+  res.status(200).json({
+    success: true,
+    data: bookings
+  });
+
 });
 
 /**
@@ -97,7 +125,6 @@ const getBooking = asyncHandler(async (req, res) => {
 const createBooking = asyncHandler(async (req, res) => {
   const {
     artisan: artisanId,
-    serviceCategory,
     serviceDescription,
     address,
     scheduledDate,
@@ -126,15 +153,21 @@ const createBooking = asyncHandler(async (req, res) => {
   }
 
   // Check if service category exists
-  const category = await ServiceCategory.findById(serviceCategory);
-  if (!category) {
-    throw new AppError('Service category not found', 404, 'CATEGORY_NOT_FOUND');
-  }
+  // const category = await ServiceCategory.findById(serviceCategory);
+  // if (!category) {
+  //   throw new AppError('Service category not found', 404, 'CATEGORY_NOT_FOUND');
+  // }
 
-  // Check if artisan offers this service
-  if (!artisan.skills.includes(serviceCategory)) {
-    throw new AppError('Artisan does not offer this service', 400, 'SERVICE_NOT_OFFERED');
-  }
+  // // Check if artisan offers this service
+  // const offersService = artisan.skills.some(
+  //   skill => skill.toString() === serviceCategory
+  // );
+  
+  // if (!offersService) {
+  //   throw new AppError('Artisan does not offer this service', 400, 'SERVICE_NOT_OFFERED');
+  // }
+
+  const serviceCategory = artisan.skills[0]
 
   // Calculate price
   const duration = estimatedDuration || 1;
@@ -170,6 +203,92 @@ const createBooking = asyncHandler(async (req, res) => {
   res.status(201).json({
     success: true,
     message: 'Booking created successfully',
+    data: booking,
+  });
+});
+
+/**
+ * @desc Initialize Paystack payment
+ * @route POST /api/bookings/:id/pay
+ * @access Private (User)
+ */
+const initializePayment = asyncHandler(async (req, res) => {
+  const booking = await Booking.findById(req.params.id).populate('user');
+
+  if (!booking) {
+    throw new AppError('Booking not found', 404);
+  }
+
+  if (booking.paymentStatus === 'paid') {
+    throw new AppError('Booking already paid', 400);
+  }
+
+  const amount = booking.price.totalAmount;
+
+  const response = await axios.post(
+    'https://api.paystack.co/transaction/initialize',
+    {
+      email: booking.user.email,
+      amount: amount,
+      callback_url: `${process.env.FRONTEND_URL}/payment-success`,
+      metadata: {
+        bookingId: booking._id,
+      },
+    },
+    {
+      headers: {
+        Authorization: `Bearer ${process.env.PAYSTACK_SECRET_KEY}`,
+        'Content-Type': 'application/json',
+      },
+    }
+  );
+
+  res.status(200).json({
+    success: true,
+    data: response.data.data,
+  });
+});
+
+/**
+ * @desc Verify Paystack payment
+ * @route GET /api/bookings/verify/:reference
+ * @access Private
+ */
+const verifyPayment = asyncHandler(async (req, res) => {
+  const { reference } = req.params;
+
+  const response = await axios.get(
+    `https://api.paystack.co/transaction/verify/${reference}`,
+    {
+      headers: {
+        Authorization: `Bearer ${process.env.PAYSTACK_SECRET_KEY}`,
+      },
+    }
+  );
+
+  const data = response.data.data;
+
+  if (data.status !== 'success') {
+    throw new AppError('Payment verification failed', 400);
+  }
+
+  const bookingId = data.metadata.bookingId;
+
+  const booking = await Booking.findById(bookingId);
+
+  if (!booking) {
+    throw new AppError('Booking not found', 404);
+  }
+
+  booking.paymentStatus = 'paid';
+  booking.paymentReference = reference;
+  booking.paymentMethod = 'paystack';
+
+  await booking.save();
+
+  res.status(200).json({
+    success: true,
+    message: 'Payment successful',
     data: booking,
   });
 });
@@ -429,8 +548,11 @@ const getBookingStats = asyncHandler(async (req, res) => {
 
 module.exports = {
   getBookings,
+  getMyBookings,
   getBooking,
   createBooking,
+  initializePayment,
+  verifyPayment,
   updateBookingStatus,
   cancelBooking,
   completeBooking,

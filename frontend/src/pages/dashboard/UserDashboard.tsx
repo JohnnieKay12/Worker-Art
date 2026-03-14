@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Calendar, Star, Briefcase, ChevronRight, Clock } from 'lucide-react';
-import { userApi } from '@/services/api';
+import { userApi, bookingApi } from '@/services/api';
 import type { UserDashboard as UserDashboardType } from '@/types';
 
 export default function UserDashboard() {
@@ -25,6 +25,19 @@ export default function UserDashboard() {
       console.error('Error loading dashboard:', error);
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const handlePay = async (bookingId: string) => {
+    try {
+      const response = await bookingApi.initializePayment(bookingId);
+  
+      if (response.success) {
+        window.location.href = response.data.authorization_url;
+      }
+    } catch (error) {
+      console.error('Payment error:', error);
+      alert('Payment failed. Please try again.');
     }
   };
 
@@ -159,6 +172,19 @@ export default function UserDashboard() {
                       <p className="text-sm font-medium mt-1">
                         ₦{(booking.price.totalAmount / 100).toLocaleString()}
                       </p>
+
+                      {booking.status === 'accepted' && booking.paymentStatus === 'pending' && (
+                        <Button
+                          size="sm"
+                          className="mt-2"
+                          onClick={(e) => {
+                            e.preventDefault();
+                            handlePay(booking._id);
+                          }}
+                        >
+                          Pay Now
+                        </Button>
+                      )}
                     </div>
                   </div>
                 </Link>

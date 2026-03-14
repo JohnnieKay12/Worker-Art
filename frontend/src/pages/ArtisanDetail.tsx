@@ -59,6 +59,7 @@ export default function ArtisanDetail() {
       navigate('/login', { state: { from: `/artisans/${id}` } });
       return;
     }
+
     navigate('/bookings/create', { state: { artisanId: id } });
   };
 

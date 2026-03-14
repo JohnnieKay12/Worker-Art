@@ -21,6 +21,7 @@ import BookingCreate from '@/pages/BookingCreate';
 import BookingDetail from '@/pages/BookingDetail';
 import Conversations from '@/pages/Conversations';
 import ConversationDetail from '@/pages/ConversationDetail';
+import PaymentSuccess from '@/pages/PaymentSuccess';
 
 // Dashboard Pages
 import UserDashboard from '@/pages/dashboard/UserDashboard';
@@ -97,6 +98,7 @@ function App() {
             <Route path="artisans/:id" element={<ArtisanDetail />} />
             <Route path="login" element={<Login />} />
             <Route path="register" element={<Register />} />
+            <Route path="/payment-success" element={<PaymentSuccess />} />
           </Route>
 
           {/* Protected Routes */}
