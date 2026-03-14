@@ -102,8 +102,9 @@ export default function UserBookings() {
 
                       <div>
                         <p className="font-semibold text-lg">
-                          {booking?.artisan?.user?.firstName}{" "}
-                          {booking?.artisan?.user?.lastName}
+                          {booking?.artisan?.user? `${booking.artisan.user.firstName} ${booking.artisan.user.lastName}`
+                          : "Artisan"}
+                          {/* {booking?.artisan?.user?.lastName} */}
                         </p>
 
                         <p className="text-gray-500">
