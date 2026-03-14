@@ -63,16 +63,14 @@ const getMyBookings = asyncHandler(async (req, res) => {
   const bookings = await Booking.find({ user: req.user.id })
     .populate({
       path: 'artisan',
-      select: 'user hourlyRate skills',
+      select: 'user skills hourlyRate',
       populate: {
         path: 'user',
-        model: 'User',
-        select: 'firstName lastName profileImage'
+        select: 'firstName lastName profileImage phone'
       }
     })
     .populate({
-      path: 'serviceCategory', 
-      model: 'serviceCategory',
+      path: 'serviceCategory',
       select: 'name'
     })
     .sort({ createdAt: -1 });
