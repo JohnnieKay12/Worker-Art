@@ -22,7 +22,7 @@ export default function PaymentSuccess() {
 
                 const response = await bookingApi.verifyPayment(reference);
 
-                if (response.success) {
+                if (response.data.success) {
                 setSuccess(true);
                 }
 
@@ -34,7 +34,7 @@ export default function PaymentSuccess() {
         };
 
         verifyPayment();
-    }, []);
+    }, [searchParams, navigate]);
 
     if (loading) {
         return (
