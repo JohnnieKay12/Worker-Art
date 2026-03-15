@@ -67,8 +67,8 @@ function App() {
       if (token) {
         try {
           const response = await authApi.getMe();
-          if (response.success) {
-            setUser(response.data.user);
+          if (response.data.success) {
+            setUser(response.data.data.user);
             // Connect socket
             connect(token);
           } else {
