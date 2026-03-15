@@ -1,3 +1,4 @@
+import BookingProgress from '@/components/BookingProgress';
 import React from 'react';
 
 const BookingDetail: React.FC = () => {
@@ -10,6 +11,11 @@ const BookingDetail: React.FC = () => {
             Pending
           </span>
         </div>
+
+        <BookingProgress 
+          status='pending'
+          paymentStatus='pending'
+        />
         
         <div className="bg-white rounded-lg shadow-md p-6 mb-4">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">

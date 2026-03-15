@@ -206,10 +206,16 @@ export const bookingApi = {
 
   create: (data: CreateBookingData) => apiService.post<Booking>('/bookings', data),
 
-  getMyBookings: () => api.get("/bookings/my-bookings"),
+  getMyBookings: () =>
+    apiService.get<{ data: Booking[] }>("/bookings/my-bookings"),
+
+  // getMyBookings: () => api.get("/bookings/my-bookings"),
 
   initializePayment: (bookingId: string) =>
     apiService.post<{ authorization_url: string }>(`/bookings/${bookingId}/pay`),
+
+  verifyPayment: (reference: string) =>
+    apiService.get(`/bookings/verify/${reference}`),
 
   updateStatus: (id: string, status: string, note?: string) =>
     apiService.put<Booking>(`/bookings/${id}/status`, { status, note }),
@@ -234,8 +240,11 @@ export const paymentApi = {
       '/payments/artisan-registration'
     ),
 
-  verify: (reference: string) =>
-    apiService.get<{ payment: Payment }>('/payments/verify', { params: { reference } }),
+    verify: (reference: string) =>
+      apiService.get(`/bookings/verify/${reference}`),
+
+  // verify: (reference: string) =>
+  //   apiService.get<{ payment: Payment }>('/payments/verify', { params: { reference } }),
 
   getMyPayments: (params?: { page?: number; limit?: number }) =>
     apiService.get<{ data: Payment[]; pagination: Pagination }>('/payments/my-payments', {

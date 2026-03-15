@@ -14,7 +14,7 @@ const bookingSchema = new mongoose.Schema(
     },
     artisan: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: 'User',
+      ref: 'Artisan',
       required: true,
     },
     serviceCategory: {

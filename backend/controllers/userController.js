@@ -1,6 +1,7 @@
 const { User, Booking, Review } = require('../models');
 const { AppError, asyncHandler } = require('../middleware/errorHandler');
 const logger = require('../utils/logger');
+const mongoose = require('mongoose');
 
 /**
  * @desc    Get all users
@@ -173,10 +174,15 @@ const deleteUser = asyncHandler(async (req, res) => {
  * @route   GET /api/users/dashboard
  * @access  Private
  */
-const getUserDashboard = asyncHandler(async (req, res) => {
-  const userId = req.user.id;
 
-  // Get booking stats
+const getUserDashboard = asyncHandler(async (req, res) => {
+  console.log("Logged in user ID:", req.user.id);
+
+  const userId = new mongoose.Types.ObjectId(req.user.id);
+  
+  const bookings = await Booking.find({ user: userId });
+  console.log("Bookings found for this user:", bookings.length);
+
   const bookingStats = await Booking.aggregate([
     { $match: { user: userId } },
     {
@@ -184,61 +190,139 @@ const getUserDashboard = asyncHandler(async (req, res) => {
         _id: null,
         totalBookings: { $sum: 1 },
         pendingBookings: {
-          $sum: { $cond: [{ $eq: ['$status', 'pending'] }, 1, 0] },
+          $sum: { $cond: [{ $eq: ['$status', 'pending'] }, 1, 0] }
         },
         acceptedBookings: {
-          $sum: { $cond: [{ $eq: ['$status', 'accepted'] }, 1, 0] },
+          $sum: { $cond: [{ $eq: ['$status', 'accepted'] }, 1, 0] }
         },
         completedBookings: {
-          $sum: { $cond: [{ $eq: ['$status', 'completed'] }, 1, 0] },
+          $sum: { $cond: [{ $eq: ['$status', 'completed'] }, 1, 0] }
         },
         cancelledBookings: {
-          $sum: { $cond: [{ $eq: ['$status', 'cancelled'] }, 1, 0] },
+          $sum: { $cond: [{ $eq: ['$status', 'cancelled'] }, 1, 0] }
         },
         totalSpent: {
           $sum: {
             $cond: [
               { $eq: ['$paymentStatus', 'paid'] },
               '$price.totalAmount',
-              0,
-            ],
-          },
-        },
-      },
-    },
+              0
+            ]
+          }
+        }
+      }
+    }
   ]);
 
-  // Get recent bookings
+  const stats = bookingStats[0] || {
+    totalBookings: 0,
+    pendingBookings: 0,
+    acceptedBookings: 0,
+    completedBookings: 0,
+    cancelledBookings: 0,
+    totalSpent: 0
+  };
+
   const recentBookings = await Booking.find({ user: userId })
-    .populate('artisan', 'user hourlyRate')
-    .populate('artisan.user', 'firstName lastName profileImage')
+    .populate({
+      path: 'artisan',
+      populate: {
+        path: 'user',
+        select: 'firstName lastName profileImage'
+      }
+    })
     .populate('serviceCategory', 'name')
     .sort({ createdAt: -1 })
     .limit(5);
 
-  // Get recent reviews
   const recentReviews = await Review.find({ user: userId })
-    .populate('artisan', 'user')
-    .populate('artisan.user', 'firstName lastName profileImage')
+    .populate({
+      path: 'artisan',
+      populate: {
+        path: 'user',
+        select: 'firstName lastName profileImage'
+      }
+    })
     .sort({ createdAt: -1 })
     .limit(5);
 
   res.status(200).json({
     success: true,
     data: {
-      stats: bookingStats[0] || {
-        totalBookings: 0,
-        pendingBookings: 0,
-        acceptedBookings: 0,
-        completedBookings: 0,
-        cancelledBookings: 0,
-        totalSpent: 0,
-      },
+      stats,
       recentBookings,
-      recentReviews,
-    },
+      recentReviews
+    }
   });
 });
+
+
+// const getUserDashboard = asyncHandler(async (req, res) => {
+//   const userId = new mongoose.Types.ObjectId(req.user.id);
+
+//   // Get booking stats
+//   const bookingStats = await Booking.aggregate([
+//     { $match: { user: userId } },
+//     {
+//       $group: {
+//         _id: null,
+//         totalBookings: { $sum: 1 },
+//         pendingBookings: {
+//           $sum: { $cond: [{ $eq: ['$status', 'pending'] }, 1, 0] },
+//         },
+//         acceptedBookings: {
+//           $sum: { $cond: [{ $eq: ['$status', 'accepted'] }, 1, 0] },
+//         },
+//         completedBookings: {
+//           $sum: { $cond: [{ $eq: ['$status', 'completed'] }, 1, 0] },
+//         },
+//         cancelledBookings: {
+//           $sum: { $cond: [{ $eq: ['$status', 'cancelled'] }, 1, 0] },
+//         },
+//         totalSpent: {
+//           $sum: {
+//             $cond: [
+//               { $eq: ['$paymentStatus', 'paid'] },
+//               '$price.totalAmount',
+//               0,
+//             ],
+//           },
+//         },
+//       },
+//     },
+//   ]);
+
+//   // Get recent bookings
+//   const recentBookings = await Booking.find({ user: userId })
+//     .populate('artisan', 'user hourlyRate')
+//     .populate('artisan.user', 'firstName lastName profileImage')
+//     .populate('serviceCategory', 'name')
+//     .sort({ createdAt: -1 })
+//     .limit(5);
+
+//   // Get recent reviews
+//   const recentReviews = await Review.find({ user: userId })
+//     .populate('artisan', 'user')
+//     .populate('artisan.user', 'firstName lastName profileImage')
+//     .sort({ createdAt: -1 })
+//     .limit(5);
+
+//   res.status(200).json({
+//     success: true,
+//     data: {
+//       stats: bookingStats[0] || {
+//         totalBookings: 0,
+//         pendingBookings: 0,
+//         acceptedBookings: 0,
+//         completedBookings: 0,
+//         cancelledBookings: 0,
+//         totalSpent: 0,
+//       },
+//       recentBookings,
+//       recentReviews,
+//     },
+//   });
+// });
 
 /**
  * @desc    Get user booking history

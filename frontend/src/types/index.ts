@@ -125,6 +125,17 @@ export interface Booking {
   updatedAt: string;
 }
 
+export interface CreateBookingData {
+  artisan: string;
+  serviceDescription: string;
+  address: Address;
+  scheduledDate: string;
+  scheduledTime: string;
+  estimatedDuration?: number;
+  specialInstructions?: string;
+  urgency?: 'low' | 'normal' | 'high' | 'emergency';
+}
+
 export interface Price {
   baseAmount: number;
   serviceFee: number;
@@ -274,6 +285,7 @@ export interface UserDashboard {
     completedBookings: number;
     cancelledBookings: number;
     totalSpent: number;
+    pendingPayments: number;
   };
   recentBookings: Booking[];
   recentReviews: Review[];

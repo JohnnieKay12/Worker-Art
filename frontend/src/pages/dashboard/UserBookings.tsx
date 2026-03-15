@@ -16,14 +16,14 @@ export default function UserBookings() {
 
   const loadBookings = async () => {
     try {
-      const response = await bookingApi.getMyBookings();
-
-      if (response?.data?.success) {
-        const bookingsData = response?.data?.data || [];
-        setBookings(bookingsData);
+      const response = await bookingApi.getAll();
+  
+      if (response.success) {
+        setBookings(response.data);
       } else {
         setBookings([]);
       }
+  
     } catch (error) {
       console.error("Error loading bookings:", error);
       setBookings([]);
@@ -32,9 +32,9 @@ export default function UserBookings() {
     }
   };
 
-  const handlePayment = async (booking: Booking) => {
+  const handlePayment = async (bookingId: string) => {
     try {
-      const response = await bookingApi.initializePayment(booking._id);
+      const response = await bookingApi.initializePayment(bookingId);
 
       if (response.success) {
         window.location.href = response.data.authorization_url;
@@ -102,9 +102,9 @@ export default function UserBookings() {
 
                       <div>
                         <p className="font-semibold text-lg">
-                          {booking?.artisan?.user? `${booking.artisan.user.firstName} ${booking.artisan.user.lastName}`
-                          : "Artisan"}
-                          {/* {booking?.artisan?.user?.lastName} */}
+                          {booking?.artisan?.user
+                            ? `${booking.artisan.user.firstName} ${booking.artisan.user.lastName}`
+                            : "Artisan"}
                         </p>
 
                         <p className="text-gray-500">
@@ -137,15 +137,15 @@ export default function UserBookings() {
                         {booking.bookingNumber}
                       </p>
 
-                      {booking.status === "accepted" && (
+                      {booking.paymentStatus === "pending" && (
                         <Button
                           className="mt-3 w-full"
                           onClick={(e) => {
                             e.preventDefault();
-                            handlePayment(booking);
+                            handlePayment(booking._id);
                           }}
                         >
-                          Pay Now
+                          Pay Now ₦ {((booking?.price?.totalAmount || 0) / 100).toLocaleString()}
                         </Button>
                       )}
                     </div>

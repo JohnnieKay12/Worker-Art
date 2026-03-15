@@ -17,12 +17,30 @@ export default function UserDashboard() {
 
   const loadDashboard = async () => {
     try {
-      const response = await userApi.getDashboard();
+      const response = await bookingApi.getAll();
+  
       if (response.success) {
-        setDashboard(response.data);
+        const bookings = response.data;
+  
+        setDashboard({
+          stats: {
+            totalBookings: bookings.length,
+            pendingBookings: bookings.filter(b => b.status === "pending").length,
+            completedBookings: bookings.filter(b => b.status === "completed").length,
+            totalSpent: bookings
+            .filter(b => b.paymentStatus === "paid")
+            .reduce((sum, b) => sum + (b.price?.totalAmount || 0), 0),
+
+            pendingPayments: bookings.filter(
+              b => b.paymentStatus === "pending"
+            ).length,
+          },
+          recentBookings: bookings.slice(0, 5)
+        });
       }
+  
     } catch (error) {
-      console.error('Error loading dashboard:', error);
+      console.error('Error loading bookings:', error);
     } finally {
       setIsLoading(false);
     }
@@ -68,7 +86,7 @@ export default function UserDashboard() {
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-5 gap-4">
         <Card>
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
@@ -91,6 +109,22 @@ export default function UserDashboard() {
               </div>
               <div className="h-10 w-10 bg-yellow-100 rounded-full flex items-center justify-center">
                 <Clock className="h-5 w-5 text-yellow-600" />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-gray-500">Pending Payments</p>
+                <p className="text-2xl font-bold">
+                  {dashboard?.stats.pendingPayments || 0}
+                </p>
+              </div>
+
+              <div className="h-10 w-10 bg-red-100 rounded-full flex items-center justify-center">
+                <Clock className="h-5 w-5 text-red-600" />
               </div>
             </div>
           </CardContent>
@@ -137,7 +171,7 @@ export default function UserDashboard() {
           </Link>
         </CardHeader>
         <CardContent>
-          {dashboard?.recentBookings.length === 0 ? (
+          {dashboard?.recentBookings?.length === 0 ? (
             <div className="text-center py-8">
               <p className="text-gray-500">No bookings yet</p>
               <Link to="/artisans">
@@ -151,38 +185,41 @@ export default function UserDashboard() {
                   <div className="flex items-center justify-between p-4 border rounded-lg hover:bg-gray-50 transition-colors">
                     <div className="flex items-center gap-4">
                       <img
-                        src={booking.artisan.user.profileImage || '/default-avatar.png'}
-                        alt={booking.artisan.user.firstName}
+                        src={booking.artisan?.user?.profileImage || '/default-avatar.png'}
+                        alt={`${booking.artisan?.user?.firstName || 'Artisan'} ${booking.artisan?.user?.lastName || ''}`}
                         className="h-12 w-12 rounded-full object-cover"
                       />
                       <div>
                         <p className="font-medium">
-                          {booking.artisan.user.firstName} {booking.artisan.user.lastName}
+                          {booking.artisan?.user
+                          ? `${booking.artisan.user.firstName || ''} ${booking.artisan.user.lastName || ''}`.trim()
+                          : 'Artisan'}
                         </p>
-                        <p className="text-sm text-gray-500">{booking.serviceCategory.name}</p>
+                        <p className="text-sm text-gray-500">{booking?.serviceCategory?.name}</p>
                         <p className="text-sm text-gray-400">
-                          {new Date(booking.scheduledDate).toLocaleDateString()} at {booking.scheduledTime}
+                          {booking?.scheduledDate ? new Date(booking.scheduledDate).toLocaleDateString()
+                            : "No date"}{" "} at {booking?.scheduledTime || "N/A"}
                         </p>
                       </div>
                     </div>
-                    <div className="text-right">
+                  <div className="text-right">
                       <Badge className={getStatusBadge(booking.status)}>
-                        {booking.status}
+                        {booking.status.replace("_", " ")}
                       </Badge>
                       <p className="text-sm font-medium mt-1">
                         ₦{(booking.price.totalAmount / 100).toLocaleString()}
                       </p>
 
-                      {booking.status === 'accepted' && booking.paymentStatus === 'pending' && (
+                      {booking.paymentStatus === 'pending' && (
                         <Button
                           size="sm"
-                          className="mt-2"
+                          className="mt-2 bg-black hover:bg-gray-800"
                           onClick={(e) => {
                             e.preventDefault();
                             handlePay(booking._id);
                           }}
                         >
-                          Pay Now
+                          Pay Now ₦{(booking.price.totalAmount / 100).toLocaleString()}
                         </Button>
                       )}
                     </div>

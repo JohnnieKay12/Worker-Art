@@ -59,29 +59,26 @@ const getBookings = asyncHandler(async (req, res) => {
  * @access  Private
  */
 const getMyBookings = asyncHandler(async (req, res) => {
-
   const bookings = await Booking.find({ user: req.user.id })
     .populate({
       path: 'artisan',
-      select: 'user skills hourlyRate',
+      // Remove this line completely ── or at least don't limit fields here
+      // select: 'skills hourlyRate',   ← DELETE or COMMENT OUT
       populate: {
         path: 'user',
-        select: 'firstName lastName profileImage phone'
+        select: 'firstName lastName profileImage'   // this now works
       }
     })
-    .populate({
-      path: 'serviceCategory',
-      select: 'name'
-    })
+    // .populate('serviceCategory', 'name')   // optional
     .sort({ createdAt: -1 });
 
-    console.log(JSON.stringify(bookings, null, 2));
+    // Add this:
+console.log('First booking artisan after populate:', bookings[0]?.artisan || 'NULL');
 
   res.status(200).json({
     success: true,
     data: bookings
   });
-
 });
 
 /**
@@ -129,6 +126,8 @@ const getBooking = asyncHandler(async (req, res) => {
  * @access  Private
  */
 const createBooking = asyncHandler(async (req, res) => {
+  console.log("BOOKING BODY:", req.body);
+  console.log("ARTISAN RECEIVED:", req.body.artisan);
   const {
     artisan: artisanId,
     serviceDescription,
@@ -139,6 +138,7 @@ const createBooking = asyncHandler(async (req, res) => {
     specialInstructions,
     urgency,
   } = req.body;
+  console.log("Artisan received:", artisanId);
 
   // Check if artisan exists and is approved
   const artisan = await Artisan.findById(artisanId).populate('user');
@@ -173,7 +173,7 @@ const createBooking = asyncHandler(async (req, res) => {
   //   throw new AppError('Artisan does not offer this service', 400, 'SERVICE_NOT_OFFERED');
   // }
 
-  const serviceCategory = artisan.skills[0]
+  // const serviceCategory = artisan.skills[0]
 
   // Calculate price
   const duration = estimatedDuration || 1;
@@ -185,7 +185,7 @@ const createBooking = asyncHandler(async (req, res) => {
   const booking = await Booking.create({
     user: req.user.id,
     artisan: artisanId,
-    serviceCategory,
+    // serviceCategory,
     serviceDescription,
     address,
     scheduledDate,
@@ -200,17 +200,33 @@ const createBooking = asyncHandler(async (req, res) => {
     urgency: urgency || 'normal',
   });
 
+  const populatedBooking = await Booking.findById(booking._id)
+  .populate({
+    path: 'artisan',
+    select: 'skills hourlyRate',
+    populate: {
+      path: 'user',
+      select: 'firstName lastName profileImage'
+    }
+  });
+
+  res.status(201).json({
+    success: true,
+    message: 'Booking created successfully',
+    data: populatedBooking,
+  });
+
   // Send notification emails (non-blocking)
   emailService.sendBookingRequestEmail(booking, req.user, artisan.user).catch(err => {
     logger.error('Failed to send booking request email:', err.message);
   });
 
   logger.info(`Booking created: ${booking.bookingNumber} by user: ${req.user.id}`);
-  res.status(201).json({
-    success: true,
-    message: 'Booking created successfully',
-    data: booking,
-  });
+  // res.status(201).json({
+  //   success: true,
+  //   message: 'Booking created successfully',
+  //   data: booking,
+  // });
 });
 
 /**
@@ -225,6 +241,10 @@ const initializePayment = asyncHandler(async (req, res) => {
     throw new AppError('Booking not found', 404);
   }
 
+  if (booking.user._id.toString() !== req.user.id) {
+    throw new AppError('Not authorized to pay for this booking', 403);
+  }
+
   if (booking.paymentStatus === 'paid') {
     throw new AppError('Booking already paid', 400);
   }
@@ -237,6 +257,7 @@ const initializePayment = asyncHandler(async (req, res) => {
       email: booking.user.email,
       amount: amount,
       callback_url: `${process.env.FRONTEND_URL}/payment-success`,
+      // callback_url: `${process.env.FRONTEND_URL}/dashboard`,
       metadata: {
         bookingId: booking._id,
       },
@@ -289,6 +310,7 @@ const verifyPayment = asyncHandler(async (req, res) => {
   booking.paymentStatus = 'paid';
   booking.paymentReference = reference;
   booking.paymentMethod = 'paystack';
+  booking.status = "accepted";
 
   await booking.save();
 
