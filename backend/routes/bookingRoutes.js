@@ -10,21 +10,27 @@ const {
 } = require('../middleware/validation');
 const { bookingLimiter } = require('../middleware/rateLimiter');
 
-// All routes require authentication
+
+// PUBLIC PAYMENT VERIFICATION ROUTE
+router.get('/verify/:reference', bookingController.verifyPayment);
+
+
+// All routes below require authentication
 router.use(protect);
+
 
 // User routes
 router.post('/', bookingLimiter, createBookingValidation, bookingController.createBooking);
-// router.get('/my-bookings', paginationValidation, bookingController.getBookings);
 router.get('/my-bookings', bookingController.getMyBookings);
 router.get('/:id', bookingController.getBooking);
 router.put('/:id/status', updateBookingStatusValidation, bookingController.updateBookingStatus);
 router.put('/:id/cancel', cancelBookingValidation, bookingController.cancelBooking);
 router.put('/:id/complete', authorize('artisan', 'admin'), bookingController.completeBooking);
 
+
 // Payment routes
 router.post('/:id/pay', bookingController.initializePayment);
-router.get('/verify/:reference', bookingController.verifyPayment);
+
 
 // Admin only routes
 router.use(authorize('admin'));
